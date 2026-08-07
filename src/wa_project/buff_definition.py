@@ -21,6 +21,30 @@ BLESSING_PRIORITY = (
     ("Blessing of Might", 4),
 )
 
+BUFF_AURA_NAMES = {
+    "Blessing of Kings": ("Greater Blessing of Kings", "Blessing of Kings"),
+    "Blessing of Wisdom": ("Greater Blessing of Wisdom", "Blessing of Wisdom"),
+    "Blessing of Sanctuary": (
+        "Greater Blessing of Sanctuary",
+        "Blessing of Sanctuary",
+    ),
+    "Blessing of Might": ("Greater Blessing of Might", "Blessing of Might"),
+    "Prayer of Fortitude": ("Prayer of Fortitude", "Power Word: Fortitude"),
+    "Mark of the Wild": ("Gift of the Wild", "Mark of the Wild"),
+    "Arcane Intellect": ("Arcane Brilliance", "Arcane Intellect"),
+    "Divine Spirit": ("Prayer of Spirit", "Divine Spirit"),
+    "Shadow Protection": ("Prayer of Shadow Protection", "Shadow Protection"),
+    "Well Fed": ("Well Fed",),
+}
+
+BUFF_PROVIDER_CLASSES = {
+    "Prayer of Fortitude": ("PRIEST",),
+    "Mark of the Wild": ("DRUID",),
+    "Arcane Intellect": ("MAGE",),
+    "Divine Spirit": ("PRIEST",),
+    "Shadow Protection": ("PRIEST",),
+}
+
 
 def _animation() -> dict[str, dict[str, Any]]:
     return {
@@ -134,7 +158,14 @@ def _item_trigger(
     return trigger
 
 
-def _paladin_count_trigger(minimum: int) -> dict[str, Any]:
+def _class_presence_trigger(
+    classes: tuple[str, ...],
+    *,
+    minimum: int = 1,
+) -> dict[str, Any]:
+    class_checks = " or ".join(
+        f'classFile == "{class_name}"' for class_name in classes
+    )
     return {
         "check": "event",
         "custom": f"""function()
@@ -142,17 +173,17 @@ def _paladin_count_trigger(minimum: int) -> dict[str, Any]:
         return false
     end
 
-    local paladins = 0
+    local providers = 0
 
     for i = 1, MAX_RAID_MEMBERS do
         local _, _, _, _, _, classFile = GetRaidRosterInfo(i)
 
-        if classFile == "PALADIN" then
-            paladins = paladins + 1
+        if {class_checks} then
+            providers = providers + 1
         end
     end
 
-    return paladins >= {minimum}
+    return providers >= {minimum}
 end""",
         "custom_type": "status",
         "debuffType": "HELPFUL",
@@ -162,10 +193,15 @@ end""",
     }
 
 
+def _paladin_count_trigger(minimum: int) -> dict[str, Any]:
+    return _class_presence_trigger(("PALADIN",), minimum=minimum)
+
+
 def _standard_triggers(
     names: list[str],
     *,
     minimum_paladins: int | None = None,
+    provider_classes: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     triggers: dict[str, Any] = {
         "activeTriggerMode": -10.0,
@@ -184,9 +220,14 @@ def _standard_triggers(
         "trigger": _aura_trigger(names, 60, ">", missing=True),
         "untrigger": [],
     }
-    if minimum_paladins is not None:
+    if minimum_paladins is not None or provider_classes:
+        applicability_trigger = (
+            _paladin_count_trigger(minimum_paladins)
+            if minimum_paladins is not None
+            else _class_presence_trigger(provider_classes)
+        )
         triggers["6"] = {
-            "trigger": _paladin_count_trigger(minimum_paladins),
+            "trigger": applicability_trigger,
             "untrigger": [],
         }
         triggers["customTriggerLogic"] = """function(t)
@@ -365,7 +406,9 @@ def _child(
     icon: int | str,
     names: list[str],
     minimum_paladins: int | None = None,
+    provider_classes: tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    has_applicability = minimum_paladins is not None or bool(provider_classes)
     return {
         "actions": {"finish": [], "init": {"do_custom": False}, "start": []},
         "alpha": 1.0,
@@ -376,7 +419,7 @@ def _child(
         "color": [1.0, 1.0, 1.0, 1.0],
         "config": [],
         "conditions": _conditions(lock_subregion=5)
-        if minimum_paladins is not None
+        if has_applicability
         else _conditions(),
         "cooldown": False,
         "cooldownEdge": False,
@@ -401,10 +444,14 @@ def _child(
         "regionType": "icon",
         "selfPoint": "CENTER",
         "subRegions": [*_subregions(), _lock_subregion()]
-        if minimum_paladins is not None
+        if has_applicability
         else _subregions(),
         "tocversion": 20506,
-        "triggers": _standard_triggers(names, minimum_paladins=minimum_paladins),
+        "triggers": _standard_triggers(
+            names,
+            minimum_paladins=minimum_paladins,
+            provider_classes=provider_classes,
+        ),
         "uid": uid,
         "version": 3.0,
         "width": 45.0,
@@ -508,65 +555,70 @@ def _buff_group() -> dict[str, Any]:
             aura_id="Blessing of Kings",
             uid="xd8MKWVWNCn",
             icon=135993,
-            names=["Greater Blessing of Kings", "Blessing of Kings"],
+            names=list(BUFF_AURA_NAMES["Blessing of Kings"]),
             minimum_paladins=minimum_paladins["Blessing of Kings"],
         ),
         _child(
             aura_id="Blessing of Wisdom",
             uid="rslA2SaZdJD",
             icon=135912,
-            names=["Greater Blessing of Wisdom", "Blessing of Wisdom"],
+            names=list(BUFF_AURA_NAMES["Blessing of Wisdom"]),
             minimum_paladins=minimum_paladins["Blessing of Wisdom"],
         ),
         _child(
             aura_id="Blessing of Sanctuary",
             uid="1AcFf)aZWMg",
             icon="Interface\\Icons\\Spell_Holy_GreaterBlessingofSanctuary",
-            names=["Greater Blessing of Sanctuary", "Blessing of Sanctuary"],
+            names=list(BUFF_AURA_NAMES["Blessing of Sanctuary"]),
             minimum_paladins=minimum_paladins["Blessing of Sanctuary"],
         ),
         _child(
             aura_id="Blessing of Might",
             uid="MK)EVfLab4k",
             icon=135908,
-            names=["Greater Blessing of Might", "Blessing of Might"],
+            names=list(BUFF_AURA_NAMES["Blessing of Might"]),
             minimum_paladins=minimum_paladins["Blessing of Might"],
         ),
         _child(
             aura_id="Prayer of Fortitude",
             uid="7AkfkGaf5L1",
             icon="135941",
-            names=["Prayer of Fortitude", "Power Word: Fortitude"],
+            names=list(BUFF_AURA_NAMES["Prayer of Fortitude"]),
+            provider_classes=BUFF_PROVIDER_CLASSES["Prayer of Fortitude"],
         ),
         _child(
             aura_id="Mark of the Wild",
             uid="PORpl7QvaKs",
             icon=136038,
-            names=["Gift of the Wild", "Mark of the Wild"],
+            names=list(BUFF_AURA_NAMES["Mark of the Wild"]),
+            provider_classes=BUFF_PROVIDER_CLASSES["Mark of the Wild"],
         ),
         _child(
             aura_id="Arcane Intellect",
             uid="BzmrReW24L)",
             icon=135869,
-            names=["Arcane Brilliance", "Arcane Intellect"],
+            names=list(BUFF_AURA_NAMES["Arcane Intellect"]),
+            provider_classes=BUFF_PROVIDER_CLASSES["Arcane Intellect"],
         ),
         _child(
             aura_id="Divine Spirit",
             uid="w(4DygDR1PR",
             icon=135946,
-            names=["Prayer of Spirit", "Divine Spirit"],
+            names=list(BUFF_AURA_NAMES["Divine Spirit"]),
+            provider_classes=BUFF_PROVIDER_CLASSES["Divine Spirit"],
         ),
         _child(
             aura_id="Shadow Protection",
             uid="v1V9gYykpUo",
             icon=135945,
-            names=["Prayer of Shadow Protection", "Shadow Protection"],
+            names=list(BUFF_AURA_NAMES["Shadow Protection"]),
+            provider_classes=BUFF_PROVIDER_CLASSES["Shadow Protection"],
         ),
         _child(
             aura_id="Well Fed",
             uid="7cHYBkGPYe0",
             icon=136000,
-            names=["Well Fed"],
+            names=list(BUFF_AURA_NAMES["Well Fed"]),
         ),
         _wizard_oil(),
     ]

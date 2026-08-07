@@ -27,14 +27,25 @@ def _stable_uid(aura_name: str) -> str:
     return sha1(f"wow-wa-project:{aura_name}".encode("utf-8")).hexdigest()[:10]
 
 
-def _configure_target_trigger(aura: dict[str, Any], aura_name: str) -> None:
+def _configure_target_trigger(
+    aura: dict[str, Any],
+    aura_name: str,
+    *,
+    name_pattern: bool = False,
+) -> None:
     trigger = aura["triggers"]["1"]["trigger"]
     trigger["auranames"] = [aura_name]
     trigger["matchesShowOn"] = "showOnMissing"
-    trigger["namePattern_name"] = aura_name
-    trigger["namePattern_operator"] = "find('%s')"
-    trigger["useName"] = False
-    trigger["useNamePattern"] = True
+    if name_pattern:
+        trigger["namePattern_name"] = aura_name
+        trigger["namePattern_operator"] = "find('%s')"
+        trigger["useName"] = False
+        trigger["useNamePattern"] = True
+    else:
+        trigger.pop("namePattern_name", None)
+        trigger.pop("namePattern_operator", None)
+        trigger.pop("useNamePattern", None)
+        trigger["useName"] = True
 
 
 def _configure_provider_trigger(
@@ -198,9 +209,9 @@ def _target_group(package: dict[str, Any]) -> dict[str, Any]:
 def apply_edits(package: dict[str, Any]) -> dict[str, Any]:
     """Apply project edits and return the package to publish.
 
-    The basis already tracks the major raid armor debuffs plus Hunter's Mark.
-    Add only raid DPS amplification debuffs that materially affect a hunter's
-    physical damage: Expose Weakness and Blood Frenzy.
+    The code-defined package tracks the major raid armor debuffs plus Hunter's
+    Mark. Add only raid DPS amplification debuffs that materially affect a
+    hunter's physical damage: Expose Weakness and Blood Frenzy.
     """
 
     target_group = _target_group(package)
@@ -211,7 +222,11 @@ def apply_edits(package: dict[str, Any]) -> dict[str, Any]:
             trigger = child.get("triggers", {}).get("1", {}).get("trigger", {})
             aura_names = trigger.get("auranames", [])
             if aura_names:
-                _configure_target_trigger(child, aura_names[0])
+                _configure_target_trigger(
+                    child,
+                    aura_names[0],
+                    name_pattern=bool(trigger.get("useNamePattern")),
+                )
                 _configure_raid_boss_target(child)
                 _configure_activation_logic(child)
                 lock_subregion = _configure_lock_overlay(child)

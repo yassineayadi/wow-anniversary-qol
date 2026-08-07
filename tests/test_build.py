@@ -147,7 +147,7 @@ def test_imported_buff_tracker_is_code_defined() -> None:
     } == ids
 
     wisdom = next(child for child in buff_group["c"] if child["id"] == "Blessing of Wisdom")
-    assert "paladins >= 2" in wisdom["triggers"]["6"]["trigger"]["custom"]
+    assert "providers >= 2" in wisdom["triggers"]["6"]["trigger"]["custom"]
 
     wizard_oil = next(
         child for child in buff_group["c"] if child["id"] == "Superior Wizard Oil"
@@ -169,7 +169,7 @@ def test_blessings_use_paladin_count_priority() -> None:
     ]
     for minimum, child in enumerate(blessings, start=1):
         count_trigger = child["triggers"]["6"]["trigger"]
-        assert f"paladins >= {minimum}" in count_trigger["custom"]
+        assert f"providers >= {minimum}" in count_trigger["custom"]
         assert "not t[6]" in child["triggers"]["customTriggerLogic"]
         assert child["subRegions"][4]["type"] == "subtexture"
         assert child["conditions"][-1] == {
@@ -180,3 +180,41 @@ def test_blessings_use_paladin_count_priority() -> None:
             ],
             "check": {"trigger": 6.0, "value": 0.0, "variable": "show"},
         }
+
+
+def test_generic_buffs_are_locked_when_no_provider_class_is_present() -> None:
+    package = build(output=Path("dist") / "test-wa-import.txt")
+    buff_group = _group(package, "Tankadin Raid Buffs Tracker")
+
+    for aura_id, provider_class in {
+        "Prayer of Fortitude": "PRIEST",
+        "Mark of the Wild": "DRUID",
+        "Arcane Intellect": "MAGE",
+        "Divine Spirit": "PRIEST",
+        "Shadow Protection": "PRIEST",
+    }.items():
+        child = next(child for child in buff_group["c"] if child["id"] == aura_id)
+        provider_trigger = child["triggers"]["6"]["trigger"]
+        assert f'classFile == "{provider_class}"' in provider_trigger["custom"]
+        assert child["subRegions"][4]["type"] == "subtexture"
+        assert child["conditions"][-1]["check"] == {
+            "trigger": 6.0,
+            "value": 0.0,
+            "variable": "show",
+        }
+
+    for aura_id in ("Well Fed", "Superior Wizard Oil"):
+        child = next(child for child in buff_group["c"] if child["id"] == aura_id)
+        assert "6" not in child["triggers"]
+        assert all(subregion["type"] != "subtexture" for subregion in child["subRegions"])
+
+
+def test_target_names_preserve_exact_and_pattern_matching() -> None:
+    package = build(output=Path("dist") / "test-wa-import.txt")
+    target_group = _group(package, "Target Debuff Tracker")
+    by_id = {child["id"]: child for child in target_group["c"]}
+
+    assert by_id["TDT - Hunter's Mark"]["triggers"]["1"]["trigger"]["useName"] is True
+    assert "useNamePattern" not in by_id["TDT - Hunter's Mark"]["triggers"]["1"]["trigger"]
+    assert by_id["TDT - Faerie Fire"]["triggers"]["1"]["trigger"]["useNamePattern"] is True
+    assert by_id["TDT - Expose Weakness"]["triggers"]["1"]["trigger"]["useName"] is True
