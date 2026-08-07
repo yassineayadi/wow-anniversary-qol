@@ -52,6 +52,10 @@ def test_dynamic_group_grows_from_the_center() -> None:
     assert display["grow"] == "HORIZONTAL"
     assert display["align"] == "CENTER"
     assert display["animate"] is True
+    assert display["anchorFrameType"] == "SCREEN"
+    assert display["anchorPoint"] == "TOP"
+    assert display["xOffset"] == 0.0
+    assert display["yOffset"] == -22.0
 
 
 def test_target_debuffs_only_show_when_missing() -> None:
@@ -218,3 +222,24 @@ def test_target_names_preserve_exact_and_pattern_matching() -> None:
     assert "useNamePattern" not in by_id["TDT - Hunter's Mark"]["triggers"]["1"]["trigger"]
     assert by_id["TDT - Faerie Fire"]["triggers"]["1"]["trigger"]["useNamePattern"] is True
     assert by_id["TDT - Expose Weakness"]["triggers"]["1"]["trigger"]["useName"] is True
+
+
+def test_trackers_share_top_center_layout_and_visual_scale() -> None:
+    package = build(output=Path("dist") / "test-wa-import.txt")
+    target_group = _group(package, "Target Debuff Tracker")
+    buff_group = _group(package, "Tankadin Raid Buffs Tracker")
+    target_display = target_group["d"]
+    buff_display = buff_group["d"]
+    target_child = target_group["c"][0]
+    buff_child = buff_group["c"][0]
+
+    assert buff_display["anchorFrameType"] == "SCREEN"
+    assert buff_display["anchorPoint"] == "TOP"
+    assert buff_display["xOffset"] == 0.0
+    assert buff_display["yOffset"] == -70.0
+    assert target_display["space"] == buff_display["space"] == 1.0
+
+    assert target_child["width"] == target_child["height"] == 38.0
+    assert buff_child["width"] * buff_display["scale"] == 38.25
+    assert target_child["subRegions"][0]["glowColor"] == buff_child["subRegions"][2]["glowColor"]
+    assert target_child["subRegions"][2]["text_font"] == buff_child["subRegions"][1]["text_font"]

@@ -18,6 +18,9 @@ _NOOP_ANIMATION = {
     "type": "none",
 }
 
+TARGET_ICON_SIZE = 38.0
+TARGET_GROUP_Y_OFFSET = -22.0
+
 
 def _animation() -> dict[str, dict[str, Any]]:
     return {
@@ -129,12 +132,13 @@ def _sunder_follow_up_trigger() -> dict[str, Any]:
     return trigger
 
 
-def _subregions(text_size: float = 12.0, text: str = "%p") -> list[dict[str, Any]]:
+def _subregions(text_size: float = 14.0, text: str = "%p") -> list[dict[str, Any]]:
     return [
         {
             "glow": False,
             "glowBorder": False,
-            "glowColor": [0.7843137254902, 0.0, 0.0, 1.0],
+            "glowColor": [1.0, 0.0, 0.12941176470588, 1.0],
+            "glowDuration": 1.0,
             "glowFrequency": 0.25,
             "glowLength": 7.8,
             "glowLines": 8.0,
@@ -164,7 +168,7 @@ def _subregions(text_size: float = 12.0, text: str = "%p") -> list[dict[str, Any
             "text_automaticWidth": "Auto",
             "text_color": [1.0, 1.0, 1.0, 1.0],
             "text_fixedWidth": 64.0,
-            "text_font": "Expressway",
+            "text_font": "Friz Quadrata TT",
             "text_fontSize": text_size,
             "text_fontType": "OUTLINE",
             "text_justify": "CENTER",
@@ -267,8 +271,8 @@ def _child(
         "triggers": triggers,
         "uid": uid,
         "version": 1.0,
-        "width": 30.0,
-        "height": 30.0,
+        "width": TARGET_ICON_SIZE,
+        "height": TARGET_ICON_SIZE,
         "xOffset": 0.0,
         "yOffset": 0.0,
         "zoom": 0.15,
@@ -279,9 +283,8 @@ def _dynamic_group() -> dict[str, Any]:
     return {
         "actions": {"finish": [], "init": [], "start": []},
         "align": "CENTER",
-        "anchorFrameFrame": "ElvUF_Target",
         "anchorFrameType": "SCREEN",
-        "anchorPoint": "CENTER",
+        "anchorPoint": "TOP",
         "animate": True,
         "animation": {
             "finish": dict(_NOOP_ANIMATION),
@@ -347,8 +350,8 @@ def _dynamic_group() -> dict[str, Any]:
         ],
         "uid": "7fDRG37S0iS",
         "useLimit": False,
-        "xOffset": 270.0,
-        "yOffset": -278.0,
+        "xOffset": 0.0,
+        "yOffset": TARGET_GROUP_Y_OFFSET,
     }
 
 

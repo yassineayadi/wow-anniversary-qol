@@ -12,6 +12,8 @@ _NOOP_ANIMATION = {
     "type": "none",
 }
 
+BUFF_GROUP_Y_OFFSET = -70.0
+
 
 # The first N entries are the blessings expected when N Paladins are present.
 BLESSING_PRIORITY = (
@@ -629,7 +631,7 @@ def _buff_group() -> dict[str, Any]:
             "align": "CENTER",
             "alpha": 1.0,
             "anchorFrameType": "SCREEN",
-            "anchorPoint": "CENTER",
+            "anchorPoint": "TOP",
             "animate": True,
             "animation": {
                 "finish": dict(_NOOP_ANIMATION),
@@ -681,7 +683,7 @@ def _buff_group() -> dict[str, Any]:
             "scale": 0.85,
             "selfPoint": "CENTER",
             "sort": "none",
-            "space": 0.0,
+            "space": 1.0,
             "stagger": 0.0,
             "stepAngle": 15.0,
             "subRegions": [],
@@ -705,7 +707,7 @@ def _buff_group() -> dict[str, Any]:
             "useAnchorPerUnit": False,
             "useLimit": False,
             "xOffset": 0.0,
-            "yOffset": 506.0,
+            "yOffset": BUFF_GROUP_Y_OFFSET,
         },
     }
 
