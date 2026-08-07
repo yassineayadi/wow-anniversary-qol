@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .buff_definition import make_buff_group
+
 
 _NOOP_ANIMATION = {
     "duration_type": "seconds",
@@ -350,8 +352,39 @@ def _dynamic_group() -> dict[str, Any]:
     }
 
 
+def _outer_group() -> dict[str, Any]:
+    """Define the import root that keeps each tracker independently configurable."""
+
+    return {
+        "actions": {"finish": [], "init": [], "start": []},
+        "anchorFrameType": "SCREEN",
+        "anchorPoint": "CENTER",
+        "animation": _animation(),
+        "authorOptions": [],
+        "conditions": [],
+        "config": [],
+        "id": "WoW Anniversary QoL",
+        "information": [],
+        "internalVersion": 90.0,
+        "load": {
+            "class": {"multi": []},
+            "size": {"multi": []},
+            "spec": {"multi": []},
+            "talent": {"multi": []},
+        },
+        "regionType": "group",
+        "selfPoint": "CENTER",
+        "subRegions": [],
+        "tocversion": 20506,
+        "uid": "wow-anniversary-qol",
+        "version": 1.0,
+        "xOffset": 0.0,
+        "yOffset": 0.0,
+    }
+
+
 def make_package() -> dict[str, Any]:
-    """Return a fresh, fully code-defined Target Debuff Tracker package."""
+    """Return a fresh, fully code-defined tracker package."""
 
     children = [
         _child(
@@ -409,9 +442,11 @@ def make_package() -> dict[str, Any]:
             sunder_follow_up=True,
         ),
     ]
+    target_group = {"c": children, "d": _dynamic_group()}
+
     return {
-        "c": children,
-        "d": _dynamic_group(),
+        "c": [target_group, make_buff_group()],
+        "d": _outer_group(),
         "m": "d",
         "s": "3.7.2",
         "v": 1421.0,

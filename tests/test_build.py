@@ -4,6 +4,10 @@ from wa_project.build import build, load_package, validate
 from wa_project.codec import decode
 
 
+def _group(package: dict, group_id: str) -> dict:
+    return next(group for group in package["c"] if group["d"]["id"] == group_id)
+
+
 def test_build_publishes_import_without_json_source(tmp_path: Path) -> None:
     output = tmp_path / "wa-import.txt"
     package = build(output=output)
@@ -17,28 +21,31 @@ def test_validate_code_defined_package() -> None:
 
 def test_package_is_declared_in_code() -> None:
     package = load_package()
-    assert package["d"]["desc"] == "Target Debuff Tracker - code-defined"
+    assert package["d"]["id"] == "WoW Anniversary QoL"
     assert "wagoID" not in package
     assert "url" not in package["d"]
 
-    package["c"][0]["id"] = "mutated"
-    assert load_package()["c"][0]["id"] == "TDT - Judgement of Wisdom"
+    _group(package, "Target Debuff Tracker")["d"]["id"] = "mutated"
+    assert _group(load_package(), "Target Debuff Tracker")["c"][0]["id"] == (
+        "TDT - Judgement of Wisdom"
+    )
 
 
 def test_build_adds_hunter_and_pet_debuffs() -> None:
     package = build(output=Path("dist") / "test-wa-import.txt")
-    ids = {child["id"] for child in package["c"]}
+    target_group = _group(package, "Target Debuff Tracker")
+    ids = {child["id"] for child in target_group["c"]}
     assert {
         "TDT - Expose Weakness",
         "TDT - Blood Frenzy",
     } <= ids
     assert "TDT - Hemorrhage" not in ids
-    assert len(package["c"]) == 9
+    assert len(target_group["c"]) == 9
 
 
 def test_dynamic_group_grows_from_the_center() -> None:
     package = build(output=Path("dist") / "test-wa-import.txt")
-    display = package["d"]
+    display = _group(package, "Target Debuff Tracker")["d"]
 
     assert display["id"] == "Target Debuff Tracker"
     assert display["regionType"] == "dynamicgroup"
@@ -50,7 +57,7 @@ def test_dynamic_group_grows_from_the_center() -> None:
 def test_target_debuffs_only_show_when_missing() -> None:
     package = build(output=Path("dist") / "test-wa-import.txt")
 
-    for child in package["c"]:
+    for child in _group(package, "Target Debuff Tracker")["c"]:
         trigger = child["triggers"]["1"]["trigger"]
         assert trigger["unit"] == "target"
         assert trigger["matchesShowOn"] == "showOnMissing"
@@ -96,7 +103,8 @@ def test_target_debuffs_only_show_when_missing() -> None:
 
 def test_spec_specific_provider_checks() -> None:
     package = build(output=Path("dist") / "test-wa-import.txt")
-    by_id = {child["id"]: child for child in package["c"]}
+    target_group = _group(package, "Target Debuff Tracker")
+    by_id = {child["id"]: child for child in target_group["c"]}
 
     expose_trigger = by_id["TDT - Expose Weakness"]["triggers"]["2"]["trigger"]
     assert expose_trigger["class"] == "HUNTER"
@@ -111,5 +119,38 @@ def test_spec_specific_provider_checks() -> None:
 
 def test_sunder_preserves_armor_debuff_exclusivity() -> None:
     package = build(output=Path("dist") / "test-wa-import.txt")
-    sunder = next(child for child in package["c"] if child["id"] == "TDT - Sunder Armor")
+    target_group = _group(package, "Target Debuff Tracker")
+    sunder = next(
+        child for child in target_group["c"] if child["id"] == "TDT - Sunder Armor"
+    )
     assert "t[1] and t[5]" in sunder["triggers"]["customTriggerLogic"]
+
+
+def test_imported_buff_tracker_is_code_defined() -> None:
+    package = build(output=Path("dist") / "test-wa-import.txt")
+    buff_group = _group(package, "Tankadin Raid Buffs Tracker")
+    ids = {child["id"] for child in buff_group["c"]}
+
+    assert len(buff_group["c"]) == 11
+    assert {
+        "Blessing of Kings",
+        "Blessing of Wisdom",
+        "Blessing of Might",
+        "Blessing of Salvation",
+        "Prayer of Fortitude",
+        "Mark of the Wild",
+        "Arcane Intellect",
+        "Divine Spirit",
+        "Shadow Protection",
+        "Well Fed",
+        "Superior Wizard Oil",
+    } == ids
+
+    wisdom = next(child for child in buff_group["c"] if child["id"] == "Blessing of Wisdom")
+    assert "paladins >= 3" in wisdom["triggers"]["6"]["trigger"]["custom"]
+
+    wizard_oil = next(
+        child for child in buff_group["c"] if child["id"] == "Superior Wizard Oil"
+    )
+    assert wizard_oil["triggers"]["1"]["trigger"]["type"] == "item"
+    assert wizard_oil["triggers"]["5"]["trigger"]["matchesShowOn"] == "showOnMissing"

@@ -18,7 +18,7 @@ The codec submodule contains the WeakAuras-compatible Lua libraries used for `!W
 ## Workflow
 
 ```powershell
-# Build the final import string from the basis import and code edits
+# Build the final import string from the code-defined package
 wa build
 
 # Inspect the code-defined package in memory
@@ -30,7 +30,7 @@ wa validate
 
 Put the full aura definition in [`src/wa_project/definition.py`](<C:\Users\ayadi\Documents\WoW Classic Anniv\src\wa_project\definition.py>). Put transformations in [`src/wa_project/customize.py`](<C:\Users\ayadi\Documents\WoW Classic Anniv\src\wa_project\customize.py>) inside `apply_edits(package)`. The build creates a fresh package from the definition, applies those edits, and exports it using WeakAuras' current `LibSerialize` + `LibDeflate` `!WA:2!` format.
 
-The current code additions are raid-DPS-focused: Expose Weakness and Blood Frenzy. Each target debuff icon is visible only inside a raid instance and against a worldboss/raid boss. If a matching class/spec provider exists, the icon is hidden while active and glows when missing; if no provider exists, it remains visible as a dimmed/desaturated disabled icon with a lock overlay. The dynamic group grows horizontally from its center with expand/collapse animation enabled. Expose Weakness requires a Survival Hunter and Blood Frenzy requires an Arms Warrior. Personal stings, pet debuffs, crowd control, anti-healing effects, and low-impact niche debuffs such as Hemorrhage are intentionally excluded.
+The package publishes two independent dynamic groups: the raid-DPS-focused Target Debuff Tracker and the imported Tankadin Raid Buffs Tracker. Target debuffs include Expose Weakness and Blood Frenzy. Each target debuff icon is visible only inside a raid instance and against a worldboss/raid boss. If a matching class/spec provider exists, the icon is hidden while active and glows when missing; if no provider exists, it remains visible as a dimmed/desaturated disabled icon with a lock overlay. The dynamic groups grow horizontally from their centers with expand/collapse animation enabled. Expose Weakness requires a Survival Hunter and Blood Frenzy requires an Arms Warrior. The buff tracker preserves its graduated coverage states, Wisdom's three-paladin raid check, and Wizard Oil weapon-enchant tracking.
 
 On Classic/TBC, group-member spec detection requires WeakAuras' `LibSpecialization` data to be available and synced. If it is unavailable, the spec-gated debuffs remain hidden until the provider spec is known.
 

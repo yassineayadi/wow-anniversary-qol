@@ -1,9 +1,4 @@
-"""Project-owned WeakAuras edits.
-
-Keep the basis import untouched. Add all future changes to ``apply_edits``;
-the build step passes the decoded import table through this function before
-encoding it again.
-"""
+"""Project-owned WeakAuras edits for the target debuff tracker."""
 
 from __future__ import annotations
 
@@ -191,6 +186,15 @@ def _add_debuff(
     package.setdefault("c", []).append(child)
 
 
+def _target_group(package: dict[str, Any]) -> dict[str, Any]:
+    """Find the nested target-debuff group in the published package."""
+
+    for child in package.get("c", []):
+        if child.get("d", {}).get("id") == "Target Debuff Tracker":
+            return child
+    raise KeyError("Target Debuff Tracker group is missing from the package")
+
+
 def apply_edits(package: dict[str, Any]) -> dict[str, Any]:
     """Apply project edits and return the package to publish.
 
@@ -199,8 +203,9 @@ def apply_edits(package: dict[str, Any]) -> dict[str, Any]:
     physical damage: Expose Weakness and Blood Frenzy.
     """
 
-    _configure_dynamic_group(package)
-    children = package.get("c", [])
+    target_group = _target_group(package)
+    _configure_dynamic_group(target_group)
+    children = target_group.get("c", [])
     for child in children:
         if child.get("id", "").startswith("TDT - "):
             trigger = child.get("triggers", {}).get("1", {}).get("trigger", {})
@@ -224,5 +229,5 @@ def apply_edits(package: dict[str, Any]) -> dict[str, Any]:
         child for child in children if child.get("id") == "TDT - Hunter's Mark"
     )
     for aura_name, icon, class_name, spec_ids in RAID_DPS_DEBUFFS:
-        _add_debuff(package, template, aura_name, icon, class_name, spec_ids)
+        _add_debuff(target_group, template, aura_name, icon, class_name, spec_ids)
     return package

@@ -10,10 +10,16 @@ from .build import DEFAULT_OUTPUT, build, inspect_package, validate
 
 def _cmd_build(output: Path) -> None:
     package = build(output=output)
-    children = package.get("c", [])
+    groups = package.get("c", [])
+    children = sum(
+        len(group.get("c", []))
+        for group in groups
+        if isinstance(group, dict) and isinstance(group.get("c", []), list)
+    )
     print(f"Built {output}")
     print(f"root: {package.get('d', {}).get('id', '<missing>')}")
-    print(f"children: {len(children) if isinstance(children, list) else '<not a list>'}")
+    print(f"groups: {len(groups) if isinstance(groups, list) else '<not a list>'}")
+    print(f"children: {children}")
 
 
 def _cmd_inspect() -> None:

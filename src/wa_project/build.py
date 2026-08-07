@@ -36,12 +36,18 @@ def inspect_package() -> dict[str, Any]:
 
     package = load_package()
     root = package.get("d", {})
-    children = package.get("c", [])
+    groups = package.get("c", [])
+    child_count = sum(
+        len(group.get("c", []))
+        for group in groups
+        if isinstance(group, dict) and isinstance(group.get("c", []), list)
+    )
     return {
         "mode": package.get("m", "<missing>"),
         "version": package.get("v", "<missing>"),
         "source": package.get("s", "<missing>"),
-        "children": len(children) if isinstance(children, list) else "<not a list>",
+        "groups": len(groups) if isinstance(groups, list) else "<not a list>",
+        "children": child_count,
         "display id": root.get("id", "<missing>"),
         "display type": root.get("regionType", "<missing>"),
     }
