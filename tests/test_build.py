@@ -135,8 +135,8 @@ def test_imported_buff_tracker_is_code_defined() -> None:
     assert {
         "Blessing of Kings",
         "Blessing of Wisdom",
+        "Blessing of Sanctuary",
         "Blessing of Might",
-        "Blessing of Salvation",
         "Prayer of Fortitude",
         "Mark of the Wild",
         "Arcane Intellect",
@@ -147,10 +147,36 @@ def test_imported_buff_tracker_is_code_defined() -> None:
     } == ids
 
     wisdom = next(child for child in buff_group["c"] if child["id"] == "Blessing of Wisdom")
-    assert "paladins >= 3" in wisdom["triggers"]["6"]["trigger"]["custom"]
+    assert "paladins >= 2" in wisdom["triggers"]["6"]["trigger"]["custom"]
 
     wizard_oil = next(
         child for child in buff_group["c"] if child["id"] == "Superior Wizard Oil"
     )
     assert wizard_oil["triggers"]["1"]["trigger"]["type"] == "item"
     assert wizard_oil["triggers"]["5"]["trigger"]["matchesShowOn"] == "showOnMissing"
+
+
+def test_blessings_use_paladin_count_priority() -> None:
+    package = build(output=Path("dist") / "test-wa-import.txt")
+    buff_group = _group(package, "Tankadin Raid Buffs Tracker")
+    blessings = [child for child in buff_group["c"] if child["id"].startswith("Blessing")]
+
+    assert [child["id"] for child in blessings] == [
+        "Blessing of Kings",
+        "Blessing of Wisdom",
+        "Blessing of Sanctuary",
+        "Blessing of Might",
+    ]
+    for minimum, child in enumerate(blessings, start=1):
+        count_trigger = child["triggers"]["6"]["trigger"]
+        assert f"paladins >= {minimum}" in count_trigger["custom"]
+        assert "not t[6]" in child["triggers"]["customTriggerLogic"]
+        assert child["subRegions"][4]["type"] == "subtexture"
+        assert child["conditions"][-1] == {
+            "changes": [
+                {"property": "alpha", "value": 0.25},
+                {"property": "desaturate", "value": True},
+                {"property": "sub.5.textureVisible", "value": True},
+            ],
+            "check": {"trigger": 6.0, "value": 0.0, "variable": "show"},
+        }

@@ -13,6 +13,15 @@ _NOOP_ANIMATION = {
 }
 
 
+# The first N entries are the blessings expected when N Paladins are present.
+BLESSING_PRIORITY = (
+    ("Blessing of Kings", 1),
+    ("Blessing of Wisdom", 2),
+    ("Blessing of Sanctuary", 3),
+    ("Blessing of Might", 4),
+)
+
+
 def _animation() -> dict[str, dict[str, Any]]:
     return {
         "finish": dict(_NOOP_ANIMATION),
@@ -22,12 +31,7 @@ def _animation() -> dict[str, dict[str, Any]]:
 
 
 def _load(*, wisdom: bool = False, wizard_oil: bool = False) -> dict[str, Any]:
-    if wizard_oil:
-        class_load = {"multi": {"PALADIN": True}, "single": "WARRIOR"}
-        use_class = False
-    else:
-        class_load = {"multi": {"WARRIOR": True}, "single": "WARRIOR"}
-        use_class = None
+    class_load = {"multi": {"PALADIN": True}, "single": "PALADIN"}
 
     load: dict[str, Any] = {
         "class": class_load,
@@ -50,8 +54,7 @@ def _load(*, wisdom: bool = False, wizard_oil: bool = False) -> dict[str, Any]:
                 "use_never": False,
             }
         )
-    if use_class is not None:
-        load["use_class"] = use_class
+    load["use_class"] = True
     return load
 
 
@@ -131,7 +134,39 @@ def _item_trigger(
     return trigger
 
 
-def _standard_triggers(names: list[str], *, wisdom: bool = False) -> dict[str, Any]:
+def _paladin_count_trigger(minimum: int) -> dict[str, Any]:
+    return {
+        "check": "event",
+        "custom": f"""function()
+    if not IsInRaid() then
+        return false
+    end
+
+    local paladins = 0
+
+    for i = 1, MAX_RAID_MEMBERS do
+        local _, _, _, _, _, classFile = GetRaidRosterInfo(i)
+
+        if classFile == "PALADIN" then
+            paladins = paladins + 1
+        end
+    end
+
+    return paladins >= {minimum}
+end""",
+        "custom_type": "status",
+        "debuffType": "HELPFUL",
+        "events": "GROUP_ROSTER_UPDATE PLAYER_ENTERING_WORLD",
+        "type": "custom",
+        "unit": "player",
+    }
+
+
+def _standard_triggers(
+    names: list[str],
+    *,
+    minimum_paladins: int | None = None,
+) -> dict[str, Any]:
     triggers: dict[str, Any] = {
         "activeTriggerMode": -10.0,
         "customTriggerLogic": "\n\n",
@@ -149,35 +184,14 @@ def _standard_triggers(names: list[str], *, wisdom: bool = False) -> dict[str, A
         "trigger": _aura_trigger(names, 60, ">", missing=True),
         "untrigger": [],
     }
-    if wisdom:
+    if minimum_paladins is not None:
         triggers["6"] = {
-            "trigger": {
-                "check": "event",
-                "custom": """function()
-    if not IsInRaid() then
-        return false
-    end
-
-    local paladins = 0
-
-    for i = 1, MAX_RAID_MEMBERS do
-        local _, _, _, _, _, classFile = GetRaidRosterInfo(i)
-
-        if classFile == "PALADIN" then
-            paladins = paladins + 1
-        end
-    end
-
-    return paladins >= 3
-end""",
-                "custom_type": "status",
-                "debuffType": "HELPFUL",
-                "events": "GROUP_ROSTER_UPDATE PLAYER_ENTERING_WORLD",
-                "type": "custom",
-                "unit": "player",
-            },
+            "trigger": _paladin_count_trigger(minimum_paladins),
             "untrigger": [],
         }
+        triggers["customTriggerLogic"] = """function(t)
+    return not t[6] or t[1] or t[2] or t[3] or t[4] or t[5]
+end"""
     return triggers
 
 
@@ -249,8 +263,32 @@ def _subregions() -> list[dict[str, Any]]:
     ]
 
 
-def _conditions() -> list[dict[str, Any]]:
-    return [
+def _lock_subregion() -> dict[str, Any]:
+    return {
+        "type": "subtexture",
+        "textureVisible": False,
+        "textureTexture": "Interface\\Icons\\INV_Misc_Lock_01",
+        "textureDesaturate": False,
+        "textureColor": [1.0, 1.0, 1.0, 1.0],
+        "textureBlendMode": "BLEND",
+        "textureMirror": False,
+        "textureRotate": False,
+        "textureRotation": 0.0,
+        "anchor_mode": "point",
+        "self_point": "CENTER",
+        "anchor_point": "CENTER",
+        "width": 18.0,
+        "height": 18.0,
+        "scale": 1.0,
+        "mirror": False,
+        "rotate": False,
+        "xOffset": 0.0,
+        "yOffset": 0.0,
+    }
+
+
+def _conditions(lock_subregion: int | None = None) -> list[dict[str, Any]]:
+    conditions = [
         {
             "changes": [
                 {"property": "alpha", "value": 0.5},
@@ -301,6 +339,24 @@ def _conditions() -> list[dict[str, Any]]:
         },
     ]
 
+    if lock_subregion is not None:
+        lock_property = f"sub.{lock_subregion}.textureVisible"
+        for condition in conditions:
+            condition["changes"].append(
+                {"property": lock_property, "value": False}
+            )
+        conditions.append(
+            {
+                "changes": [
+                    {"property": "alpha", "value": 0.25},
+                    {"property": "desaturate", "value": True},
+                    {"property": lock_property, "value": True},
+                ],
+                "check": {"trigger": 6.0, "value": 0.0, "variable": "show"},
+            }
+        )
+    return conditions
+
 
 def _child(
     *,
@@ -308,7 +364,7 @@ def _child(
     uid: str,
     icon: int | str,
     names: list[str],
-    wisdom: bool = False,
+    minimum_paladins: int | None = None,
 ) -> dict[str, Any]:
     return {
         "actions": {"finish": [], "init": {"do_custom": False}, "start": []},
@@ -319,7 +375,9 @@ def _child(
         "authorOptions": [],
         "color": [1.0, 1.0, 1.0, 1.0],
         "config": [],
-        "conditions": _conditions(),
+        "conditions": _conditions(lock_subregion=5)
+        if minimum_paladins is not None
+        else _conditions(),
         "cooldown": False,
         "cooldownEdge": False,
         "cooldownSwipe": False,
@@ -339,12 +397,14 @@ def _child(
         "internalVersion": 90.0,
         "inverse": False,
         "keepAspectRatio": False,
-        "load": _load(wisdom=wisdom),
+        "load": _load(),
         "regionType": "icon",
         "selfPoint": "CENTER",
-        "subRegions": _subregions(),
+        "subRegions": [*_subregions(), _lock_subregion()]
+        if minimum_paladins is not None
+        else _subregions(),
         "tocversion": 20506,
-        "triggers": _standard_triggers(names, wisdom=wisdom),
+        "triggers": _standard_triggers(names, minimum_paladins=minimum_paladins),
         "uid": uid,
         "version": 3.0,
         "width": 45.0,
@@ -442,31 +502,35 @@ def _wizard_oil() -> dict[str, Any]:
 
 
 def _buff_group() -> dict[str, Any]:
+    minimum_paladins = dict(BLESSING_PRIORITY)
     children = [
         _child(
             aura_id="Blessing of Kings",
             uid="xd8MKWVWNCn",
             icon=135993,
             names=["Greater Blessing of Kings", "Blessing of Kings"],
+            minimum_paladins=minimum_paladins["Blessing of Kings"],
         ),
         _child(
             aura_id="Blessing of Wisdom",
             uid="rslA2SaZdJD",
             icon=135912,
             names=["Greater Blessing of Wisdom", "Blessing of Wisdom"],
-            wisdom=True,
+            minimum_paladins=minimum_paladins["Blessing of Wisdom"],
+        ),
+        _child(
+            aura_id="Blessing of Sanctuary",
+            uid="1AcFf)aZWMg",
+            icon="Interface\\Icons\\Spell_Holy_GreaterBlessingofSanctuary",
+            names=["Greater Blessing of Sanctuary", "Blessing of Sanctuary"],
+            minimum_paladins=minimum_paladins["Blessing of Sanctuary"],
         ),
         _child(
             aura_id="Blessing of Might",
             uid="MK)EVfLab4k",
             icon=135908,
             names=["Greater Blessing of Might", "Blessing of Might"],
-        ),
-        _child(
-            aura_id="Blessing of Salvation",
-            uid="1AcFf)aZWMg",
-            icon=135910,
-            names=["Greater Blessing of Salvation", "Blessing of Salvation"],
+            minimum_paladins=minimum_paladins["Blessing of Might"],
         ),
         _child(
             aura_id="Prayer of Fortitude",
@@ -551,11 +615,11 @@ def _buff_group() -> dict[str, Any]:
             "internalVersion": 90.0,
             "limit": 5.0,
             "load": {
-                "class": {"multi": [], "single": "WARRIOR"},
+                "class": {"multi": {"PALADIN": True}, "single": "PALADIN"},
                 "size": {"multi": []},
                 "spec": {"multi": []},
                 "talent": {"multi": []},
-                "use_class": "true",
+                "use_class": True,
                 "zoneIds": "",
             },
             "radius": 200.0,
