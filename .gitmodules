@@ -1,0 +1,3 @@
+[submodule "vendor/python-weakauras-tool"]
+	path = vendor/python-weakauras-tool
+	url = https://github.com/geexmmo/python-weakauras-tool.git
