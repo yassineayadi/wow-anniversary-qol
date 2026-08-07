@@ -135,7 +135,7 @@ def test_imported_buff_tracker_is_code_defined() -> None:
     buff_group = _group(package, "Tankadin Raid Buffs Tracker")
     ids = {child["id"] for child in buff_group["c"]}
 
-    assert len(buff_group["c"]) == 11
+    assert len(buff_group["c"]) == 13
     assert {
         "Blessing of Kings",
         "Blessing of Wisdom",
@@ -147,6 +147,8 @@ def test_imported_buff_tracker_is_code_defined() -> None:
         "Divine Spirit",
         "Shadow Protection",
         "Well Fed",
+        "Scroll of Protection",
+        "Scroll of Agility",
         "Superior Wizard Oil",
     } == ids
 
@@ -158,6 +160,21 @@ def test_imported_buff_tracker_is_code_defined() -> None:
     )
     assert wizard_oil["triggers"]["1"]["trigger"]["type"] == "item"
     assert wizard_oil["triggers"]["5"]["trigger"]["matchesShowOn"] == "showOnMissing"
+
+    for scroll_id, prefix in (
+        ("Scroll of Protection", "Scroll of Protection"),
+        ("Scroll of Agility", "Scroll of Agility"),
+    ):
+        scroll = next(child for child in buff_group["c"] if child["id"] == scroll_id)
+        assert scroll["triggers"]["1"]["trigger"]["auranames"] == [
+            prefix,
+            f"{prefix} I",
+            f"{prefix} II",
+            f"{prefix} III",
+            f"{prefix} IV",
+            f"{prefix} V",
+        ]
+        assert "6" not in scroll["triggers"]
 
 
 def test_blessings_use_paladin_count_priority() -> None:

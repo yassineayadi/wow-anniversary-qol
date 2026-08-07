@@ -37,6 +37,22 @@ BUFF_AURA_NAMES = {
     "Divine Spirit": ("Prayer of Spirit", "Divine Spirit"),
     "Shadow Protection": ("Prayer of Shadow Protection", "Shadow Protection"),
     "Well Fed": ("Well Fed",),
+    "Scroll of Agility": (
+        "Scroll of Agility",
+        "Scroll of Agility I",
+        "Scroll of Agility II",
+        "Scroll of Agility III",
+        "Scroll of Agility IV",
+        "Scroll of Agility V",
+    ),
+    "Scroll of Protection": (
+        "Scroll of Protection",
+        "Scroll of Protection I",
+        "Scroll of Protection II",
+        "Scroll of Protection III",
+        "Scroll of Protection IV",
+        "Scroll of Protection V",
+    ),
 }
 
 BUFF_PROVIDER_CLASSES = {
@@ -621,6 +637,18 @@ def _buff_group() -> dict[str, Any]:
             uid="7cHYBkGPYe0",
             icon=136000,
             names=list(BUFF_AURA_NAMES["Well Fed"]),
+        ),
+        _child(
+            aura_id="Scroll of Protection",
+            uid="scroll-protection",
+            icon="Interface\\Icons\\INV_Scroll_07",
+            names=list(BUFF_AURA_NAMES["Scroll of Protection"]),
+        ),
+        _child(
+            aura_id="Scroll of Agility",
+            uid="scroll-agility",
+            icon="Interface\\Icons\\INV_Scroll_02",
+            names=list(BUFF_AURA_NAMES["Scroll of Agility"]),
         ),
         _wizard_oil(),
     ]
