@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from .build import DEFAULT_OUTPUT, build, inspect_package, validate
+from .publish import publish
 
 
 def _cmd_build(output: Path) -> None:
@@ -33,6 +34,13 @@ def _cmd_validate() -> None:
     print("Validated code-defined package")
 
 
+def _cmd_publish(addon_root: Path, output: Path) -> None:
+    result = publish(addon_root=addon_root, import_output=output)
+    print(f"Published companion addon: {result['addon_dir']}")
+    print(f"Build: {result['build_id']}")
+    print("Reload WoW, or use /reload, to apply the update through WeakAuras.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -43,6 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("inspect", help="inspect the code-defined package")
 
     commands.add_parser("validate", help="validate the code-defined round trip")
+
+    publish_parser = commands.add_parser(
+        "publish",
+        help="install a companion addon that applies the generated WA import",
+    )
+    publish_parser.add_argument(
+        "--addon-root",
+        type=Path,
+        required=True,
+        help="path to the WoW Interface\\AddOns directory",
+    )
+    publish_parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     return parser
 
 
@@ -54,6 +74,8 @@ def main() -> None:
         _cmd_inspect()
     elif args.command == "validate":
         _cmd_validate()
+    elif args.command == "publish":
+        _cmd_publish(args.addon_root, args.output)
 
 
 if __name__ == "__main__":

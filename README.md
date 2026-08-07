@@ -21,6 +21,9 @@ The codec submodule contains the WeakAuras-compatible Lua libraries used for `!W
 # Build the final import string from the code-defined package
 wa build
 
+# Install/update the companion addon that applies the import in-game
+wa publish --addon-root "C:\\Games\\World of Warcraft\\_classic_\\Interface\\AddOns"
+
 # Inspect the code-defined package in memory
 wa inspect
 
@@ -35,6 +38,8 @@ The package publishes two independent dynamic groups: the raid-DPS-focused Targe
 On Classic/TBC, group-member spec detection requires WeakAuras' `LibSpecialization` data to be available and synced. If it is unavailable, the spec-gated debuffs remain hidden until the provider spec is known.
 
 The generated import is written to `dist/wa-import.txt`, which is ignored by Git. `imports/basis.wago` remains checked in only as a recovery/comparison reference.
+
+`wa publish` writes `WowAnniversaryQoL` into the specified `Interface\\AddOns` directory. On the next login or `/reload`, it calls WeakAuras' import API and applies only when the generated build hash changed. This avoids editing WeakAuras' SavedVariables directly; use `/waqol update` to force an in-game update or `/waqol version` to inspect the applied build.
 
 ## Editing safely
 
